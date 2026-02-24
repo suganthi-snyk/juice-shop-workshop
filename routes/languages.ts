@@ -6,6 +6,7 @@
 import locales from '../data/static/locales.json'
 import fs = require('fs')
 import { type Request, type Response, type NextFunction } from 'express'
+import * as utils from '../lib/utils'
 
 module.exports = function getLanguageList () { // TODO Refactor and extend to also load backend translations from /i18n/*json and calculate joint percentage/gauge
   return (req: Request, res: Response, next: NextFunction) => {
@@ -22,9 +23,20 @@ module.exports = function getLanguageList () { // TODO Refactor and extend to al
         if (err != null) {
           next(new Error(`Unable to read i18n directory: ${err.message}`))
         }
+        const i18nBase = 'frontend/dist/frontend/assets/i18n'
         languageFiles.forEach((fileName) => {
+          const safePath = utils.resolvePathUnder(i18nBase, fileName)
+          if (!safePath) {
+            count++
+            if (count === languageFiles.length) {
+              languages.push({ key: 'en', icons: ['gb', 'us'], shortKey: 'EN', lang: 'English', percentage: 100, gauge: 'full' })
+              languages.sort((a, b) => a.lang.localeCompare(b.lang))
+              res.status(200).json(languages)
+            }
+            return
+          }
           // eslint-disable-next-line @typescript-eslint/no-misused-promises
-          fs.readFile('frontend/dist/frontend/assets/i18n/' + fileName, 'utf-8', async (err, content) => {
+          fs.readFile(safePath, 'utf-8', async (err, content) => {
             if (err != null) {
               next(new Error(`Unable to retrieve ${fileName} language file: ${err.message}`))
             }

@@ -25,7 +25,14 @@ module.exports = function fileUpload () {
       if (uploadedFileType !== null && utils.startsWith(uploadedFileType.mime, 'image')) {
         const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
         if (loggedInUser) {
-          fs.open(`frontend/dist/frontend/assets/public/images/uploads/${loggedInUser.data.id}.${uploadedFileType.ext}`, 'w', function (err, fd) {
+          const uploadsBase = 'frontend/dist/frontend/assets/public/images/uploads'
+          const safePath = utils.resolvePathUnder(uploadsBase, `${loggedInUser.data.id}.${uploadedFileType.ext}`)
+          if (!safePath) {
+            res.status(403)
+            next(new Error('Invalid path for profile image'))
+            return
+          }
+          fs.open(safePath, 'w', function (err, fd) {
             if (err != null) logger.warn('Error opening file: ' + err.message)
             // @ts-expect-error FIXME buffer has unexpected type
             fs.write(fd, buffer, 0, buffer.length, null, function (err) {

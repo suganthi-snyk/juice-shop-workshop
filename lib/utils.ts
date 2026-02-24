@@ -6,6 +6,7 @@
 /* jslint node: true */
 import packageJson from '../package.json'
 import fs from 'fs'
+import path from 'path'
 import logger from './logger'
 import config from 'config'
 import jsSHA from 'jssha'
@@ -70,6 +71,24 @@ export const unquote = function (str: string) {
 export const trunc = function (str: string, length: number) {
   str = str.replace(/(\r\n|\n|\r)/gm, '')
   return (str.length > length) ? str.substr(0, length - 1) + '...' : str
+}
+
+/** Valid MongoDB ObjectId string (24 hex chars). Use to prevent NoSQL injection via _id. */
+const MONGODB_OBJECTID_REGEX = /^[a-fA-F0-9]{24}$/
+export const isValidMongoId = (value: unknown): value is string => {
+  return typeof value === 'string' && MONGODB_OBJECTID_REGEX.test(value)
+}
+
+/**
+ * Resolve a path under a base directory. Returns null if the resolved path
+ * would be outside the base (prevents path traversal).
+ */
+export function resolvePathUnder (baseDir: string, ...segments: string[]): string | null {
+  const base = path.resolve(baseDir)
+  const resolved = path.resolve(base, ...segments)
+  const relative = path.relative(base, resolved)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null
+  return resolved
 }
 
 export const version = (module?: string) => {
